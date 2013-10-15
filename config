@@ -1,0 +1,5 @@
+host = https://username.trovebox.com
+consumerKey = blabla
+consumerSecret = secure
+token = bliblu
+tokenSecret = secret

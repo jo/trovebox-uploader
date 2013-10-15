@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+# trovebox-uploader: Upload tons of images to trovebox 
+# 
+# Find all images in given path (or, of not provided, in current path),
+# check if they need to be uploaded by comparing sha1 sums from server list
+# and upload each image while displaying a progress bar.
+#
+# Usage:
+# ./upload [folder]
+
+require 'digest/sha1'
+require 'openphoto-ruby'
+require 'ruby-progressbar'
+
+
+# find all images in path
+dirs = ARGV.empty? ? ['.'] : ARGV
+@files = Dir.glob dirs.map { |dir| File.join File.expand_path(dir), '**/*.jpg' }, File::FNM_CASEFOLD
+if @files.empty?
+  puts 'No images found'
+  exit
+end
+@files.sort!
+@progressbar = ProgressBar.create :title => "Photos", :total => @files.length, :format => '%t %c/%C (%P%%): |%B| %a %E'
+@hashes = {}
+
+
+# setup trovebox client
+config = File.read File.expand_path '~/.config/trovebox/default'
+config = config.split(/\n/).inject({}) do |hash, line|
+  key, value = line.split(/\s*=\s*/)
+  hash[key] = value
+  hash
+end
+@client = Openphoto::Client.new config['host'],
+  config['consumerKey'],
+  config['consumerSecret'],
+  config['token'],
+  config['tokenSecret']
+
+
+# get list of fotos and build hashmap
+@progressbar.log 'Requesting list of photos...'
+resp = @client.connect :get, "/photos/list.json?pageSize=0"
+@hashes = resp.result.inject({}) do |memo, r|
+  memo[r['hash']] = true
+  memo
+end
+@progressbar.log 'Retrieved %d photos' % @hashes.length
+
+
+# start upload each file
+@files.each do |filename|
+  # check if we already have that file
+  hash = Digest::SHA1.file(filename).hexdigest
+  if @hashes[hash]
+    @progressbar.log 'Duplicate %s' % filename
+    if @progressbar.total == 1
+      @progressbar.stop
+      exit
+    else
+      @progressbar.total -= 1
+      next
+    end
+  end
+  @hashes[hash] = true
+
+  # upload
+  @progressbar.log 'Uploading %s' % filename
+  begin
+    resp = @client.connect :post, "/photo/upload.json", "photo" => filename
+    @progressbar.log 'Finished: %s' % [resp.code, resp.message]
+  rescue => e
+    @progressbar.log 'Error %s: %s' % [filename, e.message]
+  end
+  @progressbar.increment
+end
+
