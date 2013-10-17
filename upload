@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # trovebox-uploader: Upload tons of images to trovebox 
 # 
-# Find all images in given path (or, of not provided, in current path),
+# Find images from path and folders (or, of not provided, from current path),
 # check if they need to be uploaded by comparing sha1 sums from server list
 # and upload each image while displaying a progress bar.
 #
@@ -11,6 +11,26 @@
 require 'digest/sha1'
 require 'openphoto-ruby'
 require 'ruby-progressbar'
+
+# Extend Openphoto::Client to support multipart uploads
+module Openphoto
+  require 'net/http/post/multipart'
+
+  class Client
+    def upload photo, params = {}
+      params["photo"] = UploadIO.new(File.open(photo), "image/jpeg", File.basename(photo))
+      access_token = prepare_access_token
+      request = Net::HTTP::Post::Multipart.new('/photo/upload.json', params)
+      access_token.sign! request
+      url = URI.parse @hostname
+      response = Net::HTTP.start(url.host, url.port, :use_ssl => true) do |http|
+        http.request request
+      end
+      response.extend Openphoto::Response
+      response
+    end
+  end
+end
 
 
 # find all images in path
@@ -72,7 +92,7 @@ end
   # upload
   @progressbar.log 'Uploading %s' % filename
   begin
-    resp = @client.connect :post, "/photo/upload.json", "photo" => filename
+    resp = @client.upload filename
     @progressbar.log 'Finished: %s' % [resp.code, resp.message]
   rescue => e
     @progressbar.log 'Error %s: %s' % [filename, e.message]

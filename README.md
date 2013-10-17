@@ -19,7 +19,7 @@ and install the required gems with `bundler`
 
 or manually via `gem`
 
-    gem install openphoto-ruby ruby-progressbar
+    gem install openphoto-ruby multipart-post ruby-progressbar
 
 ## Configuration
 
