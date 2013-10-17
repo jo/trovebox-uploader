@@ -33,9 +33,9 @@ Place a trovebox config file in `~/.config/trovebox/default`:
 
 ## Usage
 
-    ./upload folder1 folder2
+    ./upload folder1 folder2 image.jpg
 
-This will upload all JPG images in `folder1` and `folder2`.
+This will upload all JPG images in `folder1` and `folder2`, as well as `mage.jpg`
 
 To upload the current folder, just run
 

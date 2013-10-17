@@ -6,7 +6,7 @@
 # and upload each image while displaying a progress bar.
 #
 # Usage:
-# ./upload [folder]
+# ./upload [folder1, folder2, file1, file2]
 
 require 'digest/sha1'
 require 'openphoto-ruby'
@@ -15,7 +15,11 @@ require 'ruby-progressbar'
 
 # find all images in path
 dirs = ARGV.empty? ? ['.'] : ARGV
-@files = Dir.glob dirs.map { |dir| File.join File.expand_path(dir), '**/*.jpg' }, File::FNM_CASEFOLD
+dirs.map! { |dir| File.expand_path dir }
+# search recursively for images in directories
+@files = Dir.glob dirs.select { |dir| File.directory? dir }.map { |dir| File.join dir, '**/*.jpg' }, File::FNM_CASEFOLD
+# add direct files
+@files += dirs.select { |dir| File.file? dir }
 if @files.empty?
   puts 'No images found'
   exit
