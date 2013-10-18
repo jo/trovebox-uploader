@@ -93,7 +93,7 @@ end
   @progressbar.log 'Uploading %s' % filename
   begin
     resp = @client.upload filename
-    @progressbar.log 'Finished: %s' % [resp.code, resp.message]
+    @progressbar.log '%s Finished: %s' % [resp.code, resp.message]
   rescue => e
     @progressbar.log 'Error %s: %s' % [filename, e.message]
   end
